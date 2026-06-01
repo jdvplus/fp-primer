@@ -11,7 +11,7 @@
 // Option says "present OR absent (no reason needed)."
 // Same functor/ monad shape, fewer type parameters.
 //
-// Tip: import this namespaced — `import * as Option from "./option"` —
+// Tip: import this namespaced — `import * as Option from "./option.ts"` —
 // so you write Option.map, Option.some, etc.
 // (This is how fp-ts / Effect read.)
 // ============================================================================
@@ -31,7 +31,7 @@ export const fromNullable = <A>(
   a: A | null | undefined
 ): Option<NonNullable<A>> => {
   if (a == null) return none
-  return some(a as NonNullable<A>)
+  return some(a)
 }
 
 // FUNCTOR
