@@ -50,7 +50,7 @@ npm run typecheck   # tsc --noEmit — proves the types hold under strict mode
 
 5. **`src/demo.ts`**: runnable proof.
 
-- Exercises the happy path and all five
+- Exercises the happy path and all six
   failure modes, with `assert` calls that double as tests.
 
 ## The core idea

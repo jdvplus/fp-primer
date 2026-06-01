@@ -22,6 +22,7 @@ export type ScheduleError =
   | { kind: 'too_long'; max: number; actual: number }
   | { kind: 'past_date'; scheduledFor: Date }
   | { kind: 'quota_exceeded'; limit: number }
+  | { kind: 'account_not_found' }
   | { kind: 'account_disconnected'; platform: string }
 
 export type Draft = {
@@ -50,13 +51,11 @@ const accounts: Record<string, { connected: boolean; platform: string }> = {
   acct_full: { connected: true, platform: 'Instagram' },
   acct_offline: { connected: false, platform: 'TikTok' },
 }
-// Unknown account IDs fall through to a disconnected stub. In real code you'd
-// likely want a distinct `account_not_found` variant in ScheduleError so the
-// caller can tell "no such account" apart from "account exists but disconnected".
+// Returns undefined for unknown IDs so `checkAccount` can surface
+// "no such account" as a distinct ScheduleError variant.
 const getAccount = (
   accountId: string
-): { connected: boolean; platform: string } =>
-  accounts[accountId] ?? { connected: false, platform: 'unknown' }
+): { connected: boolean; platform: string } | undefined => accounts[accountId]
 
 // pseudo-code: `INSERT INTO scheduled_posts (...) RETURNING id`
 let idCounter = 0
@@ -87,6 +86,7 @@ export const checkQuota = (d: Draft): Result<Draft, ScheduleError> =>
 
 export const checkAccount = (d: Draft): Result<Draft, ScheduleError> => {
   const account = getAccount(d.accountId)
+  if (account === undefined) return err({ kind: 'account_not_found' })
   return account.connected
     ? ok(d)
     : err({ kind: 'account_disconnected', platform: account.platform })
@@ -114,8 +114,8 @@ export const schedulePost = (
 }
 
 // ---- The boundary: handle every failure, exhaustively ----------------------
-// `error` is a ScheduleError, so the switch must cover all five variants.
-// Add a sixth variant to ScheduleError and `assertNever(e)` stops compiling here
+// `error` is a ScheduleError, so the switch must cover every variant.
+// Add a new variant to ScheduleError and `assertNever(e)` stops compiling here
 // until you add its case — the new failure CANNOT silently become a generic 500 or a blank screen.
 export const toUserMessage = (e: ScheduleError): string => {
   switch (e.kind) {
@@ -127,6 +127,8 @@ export const toUserMessage = (e: ScheduleError): string => {
       return 'Pick a time in the future.'
     case 'quota_exceeded':
       return `You've hit your ${e.limit}-post limit this month.`
+    case 'account_not_found':
+      return "We couldn't find that account."
     case 'account_disconnected':
       return `Reconnect your ${e.platform} account to continue.`
 

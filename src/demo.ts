@@ -74,6 +74,13 @@ const offline = show('disconnected account', {
 })
 assert(!isOk(offline) && offline.error.kind === 'account_disconnected')
 
+const missing = show('unknown account', {
+  content: 'hello world',
+  scheduledFor: tomorrow,
+  accountId: 'acct_does_not_exist',
+})
+assert(!isOk(missing) && missing.error.kind === 'account_not_found')
+
 console.log('\n— never / exhaustiveness —')
 console.log(
   '  counterReducer(0, increment) =>',
