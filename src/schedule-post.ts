@@ -50,6 +50,9 @@ const accounts: Record<string, { connected: boolean; platform: string }> = {
   acct_full: { connected: true, platform: 'Instagram' },
   acct_offline: { connected: false, platform: 'TikTok' },
 }
+// Unknown account IDs fall through to a disconnected stub. In real code you'd
+// likely want a distinct `account_not_found` variant in ScheduleError so the
+// caller can tell "no such account" apart from "account exists but disconnected".
 const getAccount = (
   accountId: string
 ): { connected: boolean; platform: string } =>
