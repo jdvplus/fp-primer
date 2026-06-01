@@ -64,7 +64,7 @@ const persist = (d: Draft): ScheduledPost => ({
 
 // ---- The steps: each is small, pure, and honest about how it can fail -------
 
-export const validateContent = (d: Draft): Result<ScheduleError, Draft> => {
+export const validateContent = (d: Draft): Result<Draft, ScheduleError> => {
   if (d.content.trim() === '') return err({ kind: 'empty_content' })
   if (d.content.length > MAX_LEN)
     return err({ kind: 'too_long', max: MAX_LEN, actual: d.content.length })
@@ -72,17 +72,17 @@ export const validateContent = (d: Draft): Result<ScheduleError, Draft> => {
   return ok(d)
 }
 
-export const validateTiming = (d: Draft): Result<ScheduleError, Draft> =>
+export const validateTiming = (d: Draft): Result<Draft, ScheduleError> =>
   d.scheduledFor.getTime() <= Date.now()
     ? err({ kind: 'past_date', scheduledFor: d.scheduledFor })
     : ok(d)
 
-export const checkQuota = (d: Draft): Result<ScheduleError, Draft> =>
+export const checkQuota = (d: Draft): Result<Draft, ScheduleError> =>
   getScheduledCountThisMonth(d.accountId) >= MONTHLY_QUOTA
     ? err({ kind: 'quota_exceeded', limit: MONTHLY_QUOTA })
     : ok(d)
 
-export const checkAccount = (d: Draft): Result<ScheduleError, Draft> => {
+export const checkAccount = (d: Draft): Result<Draft, ScheduleError> => {
   const account = getAccount(d.accountId)
   return account.connected
     ? ok(d)
@@ -90,7 +90,7 @@ export const checkAccount = (d: Draft): Result<ScheduleError, Draft> => {
 }
 
 // ---- Composition -----------------------------------------------------------
-// Every check shares the shape (Draft) => Result<ScheduleError, Draft>,
+// Every check shares the shape (Draft) => Result<Draft, ScheduleError>,
 // so we can FOLD them with flatMap. The fold short-circuits for free:
 // the moment one step returns Err, flatMap passes it straight through
 // and the rest are skipped. No nested ifs, no pyramid.
@@ -100,9 +100,9 @@ export const checkAccount = (d: Draft): Result<ScheduleError, Draft> => {
 // the mechanics are identical to this reduce.)
 export const schedulePost = (
   draft: Draft
-): Result<ScheduleError, ScheduledPost> => {
+): Result<ScheduledPost, ScheduleError> => {
   const checks = [validateContent, validateTiming, checkQuota, checkAccount]
-  const validated = checks.reduce<Result<ScheduleError, Draft>>(
+  const validated = checks.reduce<Result<Draft, ScheduleError>>(
     (acc, check) => flatMap(acc, check),
     ok(draft)
   )
